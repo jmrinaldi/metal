@@ -22,7 +22,7 @@ end
 ```
 
 The functions `metal.train` and `metal.eval` accept an optional table of
-advanced `parameters` to further customize training. These are:
+advanced `parameters`. These are:
 
 ```lua
 local parameters = {
@@ -38,5 +38,5 @@ local parameters = {
 metal.train(net,ell,x_tr,y_tr,parameters)
 ```
 
-Finally, you can use `metal.save(net, 'fileName.t7')` to save models, and
-`net = metal.load('fileName.t7')` to load stored models. 
+Use `metal.save(net, 'fileName.t7')` to save models, and `net =
+metal.load('fileName.t7')` to load stored models. 
