@@ -96,7 +96,7 @@ function metal.train(net, ell, x, y, parameters)
   end
 end
 
-function metal.eval(net, ell, x, y, parameters)
+function metal.predict(net, x, parameters)
   local parameters = parameters or {}
   local batchSize = parameters.batchSize or 16
   local gpu = parameters.gpu or false
@@ -111,42 +111,44 @@ function metal.eval(net, ell, x, y, parameters)
 
   net:evaluate()
 
-  -- nn.ClassNLLCriterion does not work with 2D targets
-  if (ell.__typename == 'nn.ClassNLLCriterion') then
-    y = y:view(-1)
-  end
+  local predictions
 
-  local nBatches = 0
-  local accuracy = 0
-  local loss = 0
-    
   for i=1,x:size(1),batchSize do
     local to = math.min(i+batchSize-1,x:size(1))
     local input  = x[{{i,to}}]
-    local target = y[{{i,to}}]
     if gpu then input = input:cuda() end
     if gpu then target = target:cuda() end 
     local prediction = net:forward(input)
-    local batchLoss = ell:forward(prediction, target)
-    nBatches = nBatches + 1
-    loss = loss + batchLoss
+    if (predictions == nil) then
+      predictions = torch.zeros(x:size(1), prediction:size(2))
+    end
+    predictions[{{i,to}}] = prediction
+  end
+ 
+  return predictions
+end
 
-    if (ell.__typename == 'nn.BCECriterion') then
-      local plabels = torch.ge(prediction,0.5):long()
-      accuracy = accuracy + torch.eq(plabels,target:long()):double():mean()
-    end
+function metal.eval(net, ell, x, y, parameters)
+  local parameters = parameters or {}
+  local batchSize = parameters.batchSize or 16
+  local gpu = parameters.gpu or false
+  local verbose = parameters.verbose or false
 
-    if ((ell.__typename == 'nn.ClassNLLCriterion') or
-        (ell.__typename == 'nn.CrossEntropyCriterion')) then
-      local _, plabels = torch.max(prediction,2)
-      accuracy = accuracy + torch.eq(plabels,target:long()):double():mean()
-    end
-    if (verbose == true) then
-      xlua.progress(i,x:size(1))
-    end
+  local predictions = metal.predict(net, x, parameters)
+  local accuracy
+
+  if (ell.__typename == 'nn.BCECriterion') then
+    local plabels = torch.ge(predictions,0.5):long()
+    accuracy = torch.eq(plabels,y:long()):double():mean()
   end
 
-  return loss / nBatches, accuracy / nBatches
+  if ((ell.__typename == 'nn.ClassNLLCriterion') or
+      (ell.__typename == 'nn.CrossEntropyCriterion')) then
+    local _, plabels = torch.max(predictions,2)
+    accuracy = torch.eq(plabels,y:view(-1):long()):double():mean()
+  end
+
+  return ell:forward(predictions, y), accuracy
 end
 
 function metal.save(net, fname)
