@@ -40,3 +40,5 @@ metal.train(net,ell,x_tr,y_tr,parameters)
 
 Use `metal.save(net, 'fileName.t7')` to save models, and `net =
 metal.load('fileName.t7')` to load stored models. 
+
+For more examples, see the [examples folder](examples/).
