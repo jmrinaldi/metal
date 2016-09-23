@@ -57,6 +57,7 @@ function metal.train(net, ell, x, y, parameters)
   
   -- set net in training mode
   net:training()
+  net:zeroGradParameters()
  
   -- nn.ClassNLLCriterion does not work with 2D targets
   if (ell.__typename == 'nn.ClassNLLCriterion') then
