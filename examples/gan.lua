@@ -1,4 +1,4 @@
-local metal   = require 'metal' -- https://github.com/lopezpaz/metal
+local metal   = require 'metal'
 local gnuplot = require 'gnuplot'
 local optim   = require 'optim' 
 

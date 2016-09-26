@@ -1,4 +1,4 @@
-local metal = require 'metal' 
+local metal = require 'metal'
 local optim = require 'optim'
 
 local x_tr = torch.randn(1000,10) -- training inputs
