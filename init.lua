@@ -40,6 +40,17 @@ local nn = require 'nn'
 local xlua = require 'xlua'
 local optim = require 'optim'
 
+local function get_rows(x,idx)
+  if (torch.type(x) == 'table') then
+    local res = {}
+    for i = 1,#x do
+      res[#res+1] = get_rows(x[i],idx)
+    end
+    return res
+  end
+  return x:index(1,idx)
+end
+
 function metal.train(net, ell, x, y, parameters)
   local parameters = parameters or {}                 -- the parameters are:
   local gpu = parameters.gpu or false                 -- use GPU? 
@@ -77,14 +88,22 @@ function metal.train(net, ell, x, y, parameters)
      return loss, net.dp 
   end
 
+  -- get number of rows in tensor/table
+  local n
+  if(torch.type(x) == 'table') then
+    n = x[1]:size(1)
+  else
+    n = x:size(1)
+  end
+
   -- random permutation 
-  local p = torch.randperm(x:size(1))
+  local p = torch.randperm(n)
   -- proceed in minibatches
-  for i=1,x:size(1),batchSize do
+  for i=1,n,batchSize do
     -- collect random minibatch
-    local to = math.min(i+batchSize-1,x:size(1))
+    local to = math.min(i+batchSize-1,n)
     local idx = p[{{i,to}}]:long()
-    input  = x:index(1,idx)
+    input  = get_rows(x,idx)
     target = y:index(1,idx)
     if gpu then input = input:cuda() end
     if gpu then target = target:cuda() end 
@@ -92,7 +111,7 @@ function metal.train(net, ell, x, y, parameters)
     optimizer(handle, net.p, optimState)
     -- report progress if verbose 
     if (verbose == true) then
-      xlua.progress(i,x:size(1))
+      xlua.progress(i,n)
     end
   end
 end
@@ -113,15 +132,28 @@ function metal.predict(net, x, parameters)
   net:evaluate()
 
   local predictions
+  
+  -- get number of rows in tensor/table
+  local n
+  if(torch.type(x) == 'table') then
+    n = x[1]:size(1)
+  else
+    n = x:size(1)
+  end
 
-  for i=1,x:size(1),batchSize do
-    local to = math.min(i+batchSize-1,x:size(1))
-    local input  = x[{{i,to}}]
+  for i=1,n,batchSize do
+    local to = math.min(i+batchSize-1,n)
+    local idx = torch.linspace(i,to,to-i+1):long()
+    local input = get_rows(x,idx)
     if gpu then input = input:cuda() end
     if gpu then target = target:cuda() end 
     local prediction = net:forward(input)
     if (predictions == nil) then
-      predictions = torch.zeros(x:size(1), prediction:size(2))
+      if (prediction:dim() == 1) then
+        predictions = torch.zeros(n)
+      else
+        predictions = torch.zeros(n, prediction:size(2))
+      end
     end
     predictions[{{i,to}}] = prediction
   end
