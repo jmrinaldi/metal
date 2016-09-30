@@ -1,8 +1,14 @@
 # metal for torch
 
-**metal** is a very simple wrapper to easily train and evaluate neural networks
-in torch. For instance, setting up some synthetic data, as well as creating,
-training, and evaluating a neural network binary classifier takes ten lines:
+**metal** is a simple wrapper to train and evaluate neural networks in torch.
+You can install **metal** by running
+
+```
+luarocks install https://raw.githubusercontent.com/lopezpaz/metal/master/metal-1.0-0.rockspec
+```
+
+As an example, setting up some synthetic data, as well as creating, training,
+and evaluating a neural network binary classifier takes ten lines:
 
 ```lua
 local metal = require 'metal' 
