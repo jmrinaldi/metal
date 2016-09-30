@@ -21,6 +21,9 @@ for i=1,100 do  -- For 100 epochs...
 end
 ```
 
+Since `metal.train` performs only one epoch over the input data in mini-batches,
+**metal** is well suited to datasets that do not fit in memory.
+
 The functions `metal.train` and `metal.eval` accept an optional table of
 advanced `parameters`. These are:
 
