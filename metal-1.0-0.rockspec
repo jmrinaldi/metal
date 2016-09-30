@@ -2,7 +2,7 @@ package = "metal"
 version = "1.0-0"
 
 source = {
-   url = "git://github.com/lopezpaz/metal"
+   url = "git://github.com/lopezpaz/metal.git"
 }
 
 description = {
