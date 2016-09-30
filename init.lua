@@ -90,7 +90,7 @@ function metal.train(net, ell, x, y, parameters)
 
   -- get number of rows in tensor/table
   local n
-  if(torch.type(x) == 'table') then
+  if (torch.type(x) == 'table') then
     n = x[1]:size(1)
   else
     n = x:size(1)
@@ -104,7 +104,7 @@ function metal.train(net, ell, x, y, parameters)
     local to = math.min(i+batchSize-1,n)
     local idx = p[{{i,to}}]:long()
     input  = get_rows(x,idx)
-    target = y:index(1,idx)
+    target = get_rows(y,idx)
     if gpu then input = input:cuda() end
     if gpu then target = target:cuda() end 
     -- train
@@ -135,7 +135,7 @@ function metal.predict(net, x, parameters)
   
   -- get number of rows in tensor/table
   local n
-  if(torch.type(x) == 'table') then
+  if (torch.type(x) == 'table') then
     n = x[1]:size(1)
   else
     n = x:size(1)
@@ -143,7 +143,7 @@ function metal.predict(net, x, parameters)
 
   for i=1,n,batchSize do
     local to = math.min(i+batchSize-1,n)
-    local idx = torch.linspace(i,to,to-i+1):long()
+    local idx = torch.range(i,to):long()
     local input = get_rows(x,idx)
     if gpu then input = input:cuda() end
     if gpu then target = target:cuda() end 
@@ -180,8 +180,12 @@ function metal.eval(net, ell, x, y, parameters)
     local _, plabels = torch.max(predictions,2)
     accuracy = torch.eq(plabels,y:view(-1):long()):double():mean()
   end
-
-  return ell:forward(predictions, y), accuracy
+  
+  if (accuracy) then
+    return ell:forward(predictions, y), accuracy
+  else
+    return ell:forward(predictions, y)
+  end
 end
 
 function metal.save(net, fname)
