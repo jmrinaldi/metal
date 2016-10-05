@@ -4,7 +4,7 @@ local optim   = require 'optim'
 
 local bs = 16 -- batch size
 local h  = 50 -- hidden layer representation
-local Dz = 1  -- latent dimensionality
+local Dz = 5  -- latent dimensionality
 local Dx = 1  -- conditioning dimensionality
 local Dy = 1  -- conditioned dimensionality
 
@@ -40,7 +40,7 @@ local function foo(x)
   return torch.cos(x):add(torch.randn(x:size()):cmul(x*0.1))
 end
     
-for i=1,5000 do
+for i=1,10000 do
   local b_z  = torch.randn(bs,Dz)
   local b_x  = torch.randn(bs,Dx)
   local b_xz = torch.cat(b_x, b_z, 2)
