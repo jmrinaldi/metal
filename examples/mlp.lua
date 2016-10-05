@@ -1,6 +1,7 @@
 local metal = require 'metal'
 local optim = require 'optim'
 
+-- data generation
 local x_tr = torch.randn(1000,10) -- training inputs
 local x_te = torch.randn(1000,10) -- test inputs
 local y_tr = torch.ge(torch.sum(x_tr,2),0):double() -- training labels
@@ -20,9 +21,10 @@ local parameters = {
   }
 }
 
-for i=1,100 do  -- For 100 epochs...
+-- For 100 epochs...
+for i=1,100 do
   -- train on training data
-  metal.train(net,ell,x_tr,y_tr,parameters)  
+  metal.train(net,ell,x_tr,y_tr,parameters)
   -- print loss and accuracy on test data
   print(i,metal.eval(net,ell,x_te,y_te,parameters))
 end
