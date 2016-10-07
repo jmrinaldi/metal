@@ -39,16 +39,65 @@ local metal = {}
 local nn = require 'nn'
 local xlua = require 'xlua'
 local optim = require 'optim'
+local pl_data = require 'pl.data'
 
-local function get_rows(x,idx)
+function metal.get_rows(x,idx)
   if (torch.type(x) == 'table') then
     local res = {}
     for i = 1,#x do
-      res[#res+1] = get_rows(x[i],idx)
+      res[#res+1] = metal.get_rows(x[i],idx)
     end
     return res
   end
   return x:index(1,idx)
+end
+
+function metal.random_batches(x,y,bs)
+  local bs = bs or 1
+  local n
+
+  if (torch.type(x) == 'table') then
+    n = x[1]:size(1)
+  else
+    n = x:size(1)
+  end
+
+  local p  = torch.randperm(n):long()
+  local index = 1
+  local finish = false
+
+  return function ()
+    if (finish == true) then
+      return nil
+    end
+
+    from  = index
+    to    = math.min(index + bs - 1, n)
+    index = index + bs
+
+
+    if (to == n) then
+      finish = true
+    end
+
+    if to <= n then
+      return metal.get_rows(x, p[{{from,to}}]),
+             metal.get_rows(y, p[{{from,to}}])
+    end
+  end
+end
+
+function metal.normalize(x, eps)
+  local eps = eps or 0
+  local y = x:clone()
+  local m = x:mean(1):mul(-1)
+  local s = x:std(1)+eps
+  y:add(m:expandAs(y)):cdiv(s:expandAs(y))
+  return y
+end
+
+function metal.read_ascii(fname)
+  return torch.Tensor(pl_data.read(fname))
 end
 
 function metal.train(net, ell, x, y, parameters)
@@ -96,15 +145,10 @@ function metal.train(net, ell, x, y, parameters)
     n = x:size(1)
   end
 
-  -- random permutation 
-  local p = torch.randperm(n)
   -- proceed in minibatches
-  for i=1,n,batchSize do
-    -- collect random minibatch
-    local to = math.min(i+batchSize-1,n)
-    local idx = p[{{i,to}}]:long()
-    input  = get_rows(x,idx)
-    target = get_rows(y,idx)
+  for bx, by in metal.random_batches(x,y,batchSize) do
+    input = bx
+    target = by
     if gpu then input = input:cuda() end
     if gpu then target = target:cuda() end 
     -- train
@@ -121,17 +165,9 @@ function metal.predict(net, x, parameters)
   local batchSize = parameters.batchSize or 16
   local gpu = parameters.gpu or false
   local verbose = parameters.verbose or false
-
-  -- first call... 
-  if (net.p == nil) then
-    if gpu then net:cuda() end
-    if gpu then ell:cuda() end
-    net.p, net.dp = net:getParameters()
-  end
+  local predictions
 
   net:evaluate()
-
-  local predictions
   
   -- get number of rows in tensor/table
   local n
@@ -144,7 +180,7 @@ function metal.predict(net, x, parameters)
   for i=1,n,batchSize do
     local to = math.min(i+batchSize-1,n)
     local idx = torch.range(i,to):long()
-    local input = get_rows(x,idx)
+    local input = metal.get_rows(x,idx)
     if gpu then input = input:cuda() end
     if gpu then target = target:cuda() end 
     local prediction = net:forward(input)
