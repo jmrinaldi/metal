@@ -71,10 +71,9 @@ function metal.random_batches(x,y,bs)
       return nil
     end
 
-    from  = index
-    to    = math.min(index + bs - 1, n)
+    local from  = index
+    local to    = math.min(index + bs - 1, n)
     index = index + bs
-
 
     if (to == n) then
       finish = true
