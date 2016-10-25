@@ -39,7 +39,6 @@ local metal = {}
 local nn = require 'nn'
 local xlua = require 'xlua'
 local optim = require 'optim'
-local pl_data = require 'pl.data'
 
 function metal.get_rows(x,idx)
   if (torch.type(x) == 'table') then
@@ -95,8 +94,17 @@ function metal.normalize(x, eps)
   return y
 end
 
-function metal.read_ascii(fname)
-  return torch.Tensor(pl_data.read(fname))
+function metal.train_test_split(x,y,p_tr)
+  local p_tr = p_tr or 0.5
+  local n_tr = math.floor(x:size(1)*p_tr)
+  local i = torch.randperm(x:size(1)):long()
+  local i_tr = i[{{1,n_tr}}]
+  local i_te = i[{{n_tr+1,x:size(1)}}]
+  local x_tr = metal.get_rows(x,i_tr)
+  local y_tr = metal.get_rows(y,i_tr)
+  local x_te = metal.get_rows(x,i_te)
+  local y_te = metal.get_rows(y,i_te)
+  return x_tr, y_tr, x_te, y_te
 end
 
 function metal.train(net, ell, x, y, parameters)
@@ -183,14 +191,32 @@ function metal.predict(net, x, parameters)
     if gpu then input = input:cuda() end
     if gpu then target = target:cuda() end 
     local prediction = net:forward(input)
-    if (predictions == nil) then
-      if (prediction:dim() == 1) then
-        predictions = torch.zeros(n)
-      else
-        predictions = torch.zeros(n, prediction:size(2))
+
+    if(torch.type(prediction) == 'table') then
+      if (predictions == nil) then
+        predictions = {}
+        for j=1,#prediction do
+          if (prediction[j]:dim() == 1) then
+            predictions[j] = torch.zeros(n)
+          else
+            predictions[j] = torch.zeros(n, prediction[j]:size(2))
+          end
+        end
       end
+
+      for j=1,#prediction do
+        predictions[j][{{i,to}}] = prediction[j]
+      end
+    else
+      if (predictions == nil) then
+        if (prediction:dim() == 1) then
+          predictions = torch.zeros(n)
+        else
+          predictions = torch.zeros(n, prediction:size(2))
+        end
+      end
+      predictions[{{i,to}}] = prediction
     end
-    predictions[{{i,to}}] = prediction
   end
  
   return predictions
